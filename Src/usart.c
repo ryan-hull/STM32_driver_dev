@@ -4,14 +4,19 @@
  *  Created on: Nov 6, 2026
  *      Author: rynos
  */
+#include <stddef.h>
 #include "stdio.h"
 #include "usart.h"
 #include "mcu.h"
+
+static uart_t *s_usart2 = NULL;
 
 drv_status_t uart_init(uart_t *console, uart_config_t *console_cfg, uint32_t timeout) {
 	//sanity check inputs:
 	if (!console || !console_cfg || console_cfg->baud == 0 ) return DRV_BAD_PARAM;
 
+	// map the console to the file-level static.
+	s_usart2 = console;
 
 	// enable the clock:
 	if (console_cfg->instance == USART1 || console_cfg->instance == USART6) {
@@ -83,11 +88,17 @@ drv_status_t uart_init(uart_t *console, uart_config_t *console_cfg, uint32_t tim
 
     // enable:
     console_cfg->instance->CR1 |= USART_CR1_UE;
+    //flip the interrupt enable bit:
+    console_cfg->instance->CR1 |= USART_CR1_RXNEIE;
+    // enable the usart2 read interrupt
+    NVIC_EnableIRQ(USART2_IRQn);
+
 
     // assign to console
     console->instance = console_cfg->instance;
+    console->rx_buf = console_cfg->rx_buf;
 
-	return DRV_OK;
+    return DRV_OK;
 }
 
 drv_status_t uart_write(uart_t *console, uint8_t *buf, size_t length, uint32_t timeout) {
@@ -112,23 +123,52 @@ drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, uint32_t ti
 	uint32_t start = millis();
 
 	for (int i = 0; i < length; ++i) {
-		// wait until DR is
-		while (!(console->instance->SR & USART_SR_RXNE)) {
+		// wait until data is in the buffer
+		while (console->rx_head == console->rx_tail) {
 			if (timeout > 0 && (millis() - start) > timeout) return DRV_TIMEOUT;
 		}
 
-		uint8_t status = console->instance->SR;
-		uint8_t data = (uint8_t) (console->instance->DR & 0xFF); //cut off the parity bit if 9 bit words
+		uint8_t data = console->rx_buf[console->rx_tail]; //cut off the parity bit if 9 bit words
+		console->rx_tail++;
+		buf[i] = data;
 
-		if ((status & USART_SR_PE) | (status & USART_SR_FE) | (status & USART_SR_NE) | (status & USART_SR_ORE)) {
-			// parity error, framing error, noise error:
-			console->error_flags += 1;
-		} else {
-
-			buf[i] = data;
-		}
-		printf("byte: %u | errors: %lu\r\n", data, console->error_flags);
+		printf("byte read from ring buffer: %u\r\n", data);
 	}
 
 	return DRV_OK;
 }
+
+
+// handle usart2 read interrupts
+void USART2_IRQHandler(void) {
+	// interrupt received, so bit already received and don't need to wait-block
+	uint8_t status = s_usart2->instance->SR;
+	uint8_t data = (uint8_t) (s_usart2->instance->DR & 0xFF); //cut off the parity bit if 9 bit words
+
+	if ((status & USART_SR_PE) | (status & USART_SR_FE) | (status & USART_SR_NE) | (status & USART_SR_ORE)) {
+		if (status & USART_SR_PE) printf("parity error\r\n");
+		if (status & USART_SR_FE) printf("framing error\r\n");
+		if (status & USART_SR_NE) printf("noise error\r\n");
+		if (status & USART_SR_ORE) printf("overrun error\r\n");
+		// parity error, framing error, noise error, overrun error:
+		s_usart2->error_flags += 1;
+	} else {
+		// move the byte to the ring buffer. index is tail
+		if (s_usart2->rx_head - s_usart2->rx_tail +1 == 0) {
+			s_usart2->overflow_count++;
+			printf("buffer overflow | count: %lu", s_usart2->overflow_count);
+		} else {
+			s_usart2->rx_buf[s_usart2->rx_head] = data;
+			s_usart2->rx_head++;
+		}
+	}
+}
+
+
+// override __io_putchar to redirect printf to my uart write.
+extern int __io_putchar(int ch) {
+	uint8_t c = (uint8_t) ch;
+	uart_write(s_usart2, &c, 1, UART_TIMEOUT_DEFAULT_MS);
+	return ch;
+}
+

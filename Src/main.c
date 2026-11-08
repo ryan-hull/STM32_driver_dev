@@ -47,19 +47,6 @@ static uart_config_t console_cfg = {
 };
 
 
-
-
-// void USART2_IRQHandler(void) {}
-
-
-extern int __io_putchar(int ch) {
-	uint8_t c = (uint8_t) ch;
-	uart_write(&console, &c, 1, UART_TIMEOUT_DEFAULT_MS);
-	return ch;
-}
-
-
-
 int main(void)
 {
   // init SysTick for flashing led and printing to console
