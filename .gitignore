@@ -1,0 +1,8 @@
+# Build
+Debug/
+Release/
+
+# Workspace, per-machine state
+.metadata/
+.settings/language.settings.xml
+*.bak
