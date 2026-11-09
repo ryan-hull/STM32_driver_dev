@@ -31,7 +31,7 @@ typedef struct {
   uart_stop_t stop;
   const gpio_pin_t tx_pin, rx_pin; // (for USART2: PA2, PA3)
   uint8_t af;                // (for USART2: 7)
-  uint8_t *rx_buf;           // ring buffer storage (DRV-GEN-004)
+  uint8_t *rx_buf;           // ring buffer storage (DRV-GEN-004) (must be multiple of 2 long)
   size_t rx_size;
 } uart_config_t;
 

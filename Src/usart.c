@@ -5,6 +5,7 @@
  *      Author: rynos
  */
 #include <stddef.h>
+#include <stdlib.h>
 #include "stdio.h"
 #include "usart.h"
 #include "mcu.h"
@@ -71,7 +72,15 @@ drv_status_t uart_init(uart_t *console, uart_config_t *console_cfg, uint32_t tim
 
     // Set BRR. Assumes over8 == 0. If we need to change later, add support here.
     // BRR is round(pclk_hz/baud)
-    console_cfg->instance->BRR = (console_cfg->pclk_hz + console_cfg->baud / 2) / console_cfg->baud;
+    uint32_t brr = (console_cfg->pclk_hz + console_cfg->baud / 2) / console_cfg->baud;
+    console_cfg->instance->BRR = brr;
+
+    // verify within 2% error
+    uint64_t left = (abs(console_cfg->pclk_hz - brr * console_cfg->baud) * 50);
+    uint64_t right = (brr * console_cfg->baud);
+    if ( (abs(console_cfg->pclk_hz - brr * console_cfg->baud) * 50) > (brr * console_cfg->baud)) {
+    	return DRV_BAUD_ERROR;
+    }
 
 
     // set parity and stop bits (M, PCE, and PS)
@@ -97,6 +106,7 @@ drv_status_t uart_init(uart_t *console, uart_config_t *console_cfg, uint32_t tim
     // assign to console
     console->instance = console_cfg->instance;
     console->rx_buf = console_cfg->rx_buf;
+    console->rx_size = console_cfg->rx_size;
 
     return DRV_OK;
 }
@@ -128,7 +138,7 @@ drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, uint32_t ti
 			if (timeout > 0 && (millis() - start) > timeout) return DRV_TIMEOUT;
 		}
 
-		uint8_t data = console->rx_buf[console->rx_tail]; //cut off the parity bit if 9 bit words
+		uint8_t data = console->rx_buf[console->rx_tail & (console->rx_size-1)]; //cut off the parity bit if 9 bit words
 		console->rx_tail++;
 		buf[i] = data;
 
@@ -154,11 +164,12 @@ void USART2_IRQHandler(void) {
 		s_usart2->error_flags += 1;
 	} else {
 		// move the byte to the ring buffer. index is tail
-		if (s_usart2->rx_head - s_usart2->rx_tail +1 == 0) {
+		if (s_usart2->rx_head - s_usart2->rx_tail == s_usart2->rx_size) {
 			s_usart2->overflow_count++;
-			printf("buffer overflow | count: %lu", s_usart2->overflow_count);
+			printf("buffer overflow | count: %lu\r\n", s_usart2->overflow_count);
 		} else {
-			s_usart2->rx_buf[s_usart2->rx_head] = data;
+			uint32_t index = s_usart2->rx_head & (s_usart2->rx_size -1);
+			s_usart2->rx_buf[s_usart2->rx_head & (s_usart2->rx_size -1)] = data;
 			s_usart2->rx_head++;
 		}
 	}

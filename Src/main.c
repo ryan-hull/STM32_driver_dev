@@ -30,7 +30,7 @@
 
 
 // debug console output setup:
-static uint8_t console_rx[256];
+static uint8_t console_rx[4];
 static uart_t console;
 
 static uart_config_t console_cfg = {
