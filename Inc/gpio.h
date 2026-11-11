@@ -62,7 +62,7 @@ static inline void gpio_write(gpio_pin_t p, bool v) {
 }
 
 static inline void gpio_toggle(gpio_pin_t p) {
-  int32_t mask = 1UL << p.num;
+  uint32_t mask = 1UL << p.num;
   // if set, set the reset bit (num shifted 16 bits over).
   // if not set, set the set bit.
   p.port->BSRR = (p.port->ODR & mask) ? (mask << 16) : mask;

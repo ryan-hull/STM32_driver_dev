@@ -81,9 +81,7 @@ drv_status_t uart_init(uart_t *console, uart_config_t *console_cfg, uint32_t tim
     console_cfg->instance->BRR = brr;
 
     // verify within 2% error
-    uint64_t left = (abs(console_cfg->pclk_hz - brr * console_cfg->baud) * 50);
-    uint64_t right = (brr * console_cfg->baud);
-    if ( (abs(console_cfg->pclk_hz - brr * console_cfg->baud) * 50) > (brr * console_cfg->baud)) {
+    if ( (console_cfg->pclk_hz - brr * console_cfg->baud * 50) > (brr * console_cfg->baud)) {
     	return DRV_BAUD_ERROR;
     }
 
@@ -122,7 +120,7 @@ drv_status_t uart_write(uart_t *console, uint8_t *buf, size_t length, uint32_t t
 
 	uint32_t start = millis();
 
-	for (int i = 0; i < length; i++) {
+	for (size_t i = 0; i < length; i++) {
 		// wait until DR is empty:
 		while (!(console->instance->SR & USART_SR_TXE)) {
 			// if timeout is set, check that we don't exceed it.
@@ -138,8 +136,9 @@ drv_status_t uart_write(uart_t *console, uint8_t *buf, size_t length, uint32_t t
 drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, size_t *received, uint32_t timeout) {
 
 	uint32_t start = millis();
+	size_t bytes_received = 0;
 
-	for (int i = 0; i < length; ++i) {
+	for (size_t i = 0; i < length; ++i) {
 		// wait until data is in the buffer
 		while (console->rx_head == console->rx_tail) {
 			if (timeout == 0 || (timeout > 0 && (millis() - start) > timeout)) return DRV_TIMEOUT;
@@ -148,18 +147,18 @@ drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, size_t *rec
 		uint8_t data = console->rx_buf[console->rx_tail & (console->rx_size-1)]; //cut off the parity bit if 9 bit words
 		console->rx_tail++;
 		buf[i] = data;
-		*received++;
+		bytes_received++;
 
 		printf("byte read from ring buffer: %u\r\n", data);
 	}
-
+	*received = bytes_received;
 	return DRV_OK;
 }
 
 
 void USART1_IRQHandler(void) {
 	// interrupt received, so bit already received and don't need to wait-block
-	uint8_t status = s_usart1->instance->SR;
+	uint32_t status = s_usart1->instance->SR;
 	uint8_t data = (uint8_t) (s_usart1->instance->DR & 0xFF); //cut off the parity bit if 9 bit words
 
 	if ((status & USART_SR_PE) | (status & USART_SR_FE) | (status & USART_SR_NE) | (status & USART_SR_ORE)) {
@@ -175,7 +174,7 @@ void USART1_IRQHandler(void) {
 			s_usart1->overflow_count++;
 //			printf("buffer overflow | count: %lu\r\n", s_usart1->overflow_count);
 		} else {
-			uint32_t index = s_usart1->rx_head & (s_usart1->rx_size -1);
+			//uint32_t index = s_usart1->rx_head & (s_usart1->rx_size -1);
 			s_usart1->rx_buf[s_usart1->rx_head & (s_usart1->rx_size -1)] = data;
 			s_usart1->rx_head++;
 		}
@@ -185,7 +184,7 @@ void USART1_IRQHandler(void) {
 // handle usart2 read interrupts
 void USART2_IRQHandler(void) {
 	// interrupt received, so bit already received and don't need to wait-block
-	uint8_t status = s_usart2->instance->SR;
+	uint32_t status = s_usart2->instance->SR;
 	uint8_t data = (uint8_t) (s_usart2->instance->DR & 0xFF); //cut off the parity bit if 9 bit words
 
 	if ((status & USART_SR_PE) | (status & USART_SR_FE) | (status & USART_SR_NE) | (status & USART_SR_ORE)) {
@@ -201,7 +200,7 @@ void USART2_IRQHandler(void) {
 			s_usart2->overflow_count++;
 			printf("buffer overflow | count: %lu\r\n", s_usart2->overflow_count);
 		} else {
-			uint32_t index = s_usart2->rx_head & (s_usart2->rx_size -1);
+			//uint32_t index = s_usart2->rx_head & (s_usart2->rx_size -1);
 			s_usart2->rx_buf[s_usart2->rx_head & (s_usart2->rx_size -1)] = data;
 			s_usart2->rx_head++;
 		}

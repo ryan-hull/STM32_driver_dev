@@ -23,12 +23,6 @@
 #include "mcu.h"
 #include "usart.h"
 
-#if !defined(__SOFT_FP__) && defined(__ARM_FP)
-  #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
-#endif
-
-
-
 // debug console output setup:
 static uint8_t console_rx[256];
 static uart_t console;
@@ -51,8 +45,6 @@ int main(void)
 {
   // init SysTick for flashing led and printing to console
   SysTick_Config(16000000 / 1000); // ticks in milliseconds
-  uint32_t timer_500=0;
-  uint32_t period_500 = 500;
   uint32_t timer_1000=0;
   uint32_t period_1000=1000;
 
@@ -81,7 +73,8 @@ int main(void)
 	size_t n = 0;
 	uart_read(&console, &c, 1, &n, 0);
     if (timer_expired(&timer_1000, period_1000, millis())) {
-      uart_write(&console, "a", 1, 100);
+      uint8_t test_write = 'a';
+      uart_write(&console, &test_write, 1, 100);
       static bool on; // static, declared on first call, stays in scope
       gpio_write(PIN_LED, on);
   	  on = !on;
