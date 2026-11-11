@@ -46,6 +46,6 @@ typedef struct {
 
 drv_status_t uart_init(uart_t *console, uart_config_t *console_cfg, uint32_t timeout);
 drv_status_t uart_write(uart_t *console, uint8_t *string, size_t length, uint32_t timeout);
-drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, uint32_t timeout);
+drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, size_t *received, uint32_t timeout);
 
 #endif /* USART_H_ */

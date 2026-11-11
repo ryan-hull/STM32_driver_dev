@@ -30,17 +30,17 @@
 
 
 // debug console output setup:
-static uint8_t console_rx[4];
+static uint8_t console_rx[256];
 static uart_t console;
 
 static uart_config_t console_cfg = {
-	  .instance = USART2,
+	  .instance = USART1,
 	  .pclk_hz = 16000000,
 	  .baud = 115200,
 	  .parity = UART_PARITY_NONE,
 	  .stop = UART_STOP_1,
-	  .tx_pin = PIN_UART2_Tx,
-	  .rx_pin = PIN_UART2_Rx,
+	  .tx_pin = PIN_UART1_Tx,
+	  .rx_pin = PIN_UART1_Rx,
 	  .af = 7,
 	  .rx_buf = console_rx,
 	  .rx_size = sizeof console_rx,
@@ -50,7 +50,7 @@ static uart_config_t console_cfg = {
 int main(void)
 {
   // init SysTick for flashing led and printing to console
-  SysTick_Config(16000000 / 16000); // ticks in milliseconds
+  SysTick_Config(16000000 / 1000); // ticks in milliseconds
   uint32_t timer_500=0;
   uint32_t period_500 = 500;
   uint32_t timer_1000=0;
@@ -77,17 +77,14 @@ int main(void)
 
   /* Loop forever */
   for(;;){
-	uart_read(&console, console_rx, 4, 0);
-//    if (timer_expired(&timer_500, period_500, millis())) {
-//      static bool on; // static, declared on first call, stays in scope
-//      gpio_write(PIN_LED, on);
-//      uart_write(&console, (uint8_t *) "hi\r\n", 4, UART_TIMEOUT_DEFAULT_MS);
-//
-//  	  on = !on;
-//  	}
-//
-//    if (timer_expired(&timer_1000, period_1000, millis())) {
-//      printf("hello\r\n");
-//    }
+	uint8_t c;
+	size_t n = 0;
+	uart_read(&console, &c, 1, &n, 0);
+    if (timer_expired(&timer_1000, period_1000, millis())) {
+      uart_write(&console, "a", 1, 100);
+      static bool on; // static, declared on first call, stays in scope
+      gpio_write(PIN_LED, on);
+  	  on = !on;
+  	}
   }
 }

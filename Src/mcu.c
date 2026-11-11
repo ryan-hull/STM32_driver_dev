@@ -10,7 +10,9 @@
 
 static volatile uint32_t s_ticks;   // static: file scope. volatile: modified elsewhere (interrupt)
 
-uint32_t millis(void) { return s_ticks; }
+uint32_t millis(void) {
+	return s_ticks;
+}
 
 void SysTick_Handler(void) {
   s_ticks++;

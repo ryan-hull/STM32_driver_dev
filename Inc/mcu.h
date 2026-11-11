@@ -16,7 +16,7 @@
 
 
 // Overrides the system default weak handlers
-void SysTick_Handler(void);
+//void SysTick_Handler(void);
 
 uint32_t millis(void);
 

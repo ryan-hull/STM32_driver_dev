@@ -13,6 +13,8 @@
 typedef struct { GPIO_TypeDef *port; uint8_t num; } gpio_pin_t;
 
 #define PIN_LED ((gpio_pin_t){ GPIOA, 5 })
+#define PIN_UART1_Tx  ((gpio_pin_t){ GPIOA, 9 })
+#define PIN_UART1_Rx  ((gpio_pin_t){ GPIOA, 10 })
 #define PIN_UART2_Tx  ((gpio_pin_t){ GPIOA, 2 })
 #define PIN_UART2_Rx  ((gpio_pin_t){ GPIOA, 3 })
 #define UART_TIMEOUT_DEFAULT_MS 100
