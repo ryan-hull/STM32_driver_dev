@@ -22,11 +22,16 @@
 #include "gpio.h"
 #include "mcu.h"
 #include "usart.h"
+#include "i2c.h"
+#include "bme280.h"
 
 // debug console output setup:
 static uint8_t console_rx[256];
 static uart_t console;
 
+static i2c_t i2c1;
+
+// uart1 config
 static uart_config_t console_cfg = {
 	  .instance = USART1,
 	  .pclk_hz = 16000000,
@@ -40,6 +45,31 @@ static uart_config_t console_cfg = {
 	  .rx_size = sizeof console_rx,
 };
 
+// i2c1 config
+static i2c_config_t i2c1_cfg = {
+		.instance = I2C1,
+		.scl = PIN_I2C1_SCL,
+		.sda = PIN_I2C1_SDA,
+		.af = 4,
+		.cr2_freq = 16,
+		.ccr = 80,
+		.trise = 17,
+};
+
+// led pin configs
+static const gpio_config_t led_config = {
+		  .pin = PIN_LED,
+		  .mode = DRV_GPIO_MODE_OUTPUT,
+		  .otype = DRV_GPIO_OTYPE_PUSH_PULL,
+		  .pull = DRV_GPIO_NOPULL,
+		  .speed = DRV_GPIO_OSPEED_LOW,
+		  .af = 0
+};
+
+//static bme280_t bme280 = {
+//		.bus = &i2c1,
+//		.addr = 0x76,
+//};
 
 int main(void)
 {
@@ -48,24 +78,24 @@ int main(void)
   uint32_t timer_1000=0;
   uint32_t period_1000=1000;
 
-  // enable the GPIOA clock for the user LED
+  // enable the GPIOA clock for the user LED/UART
   gpio_port_enable(GPIOA);
+
+  // enable the GPIOB clock for I2C
+  gpio_port_enable(GPIOB);
 
   // uart init
   uart_init(&console, &console_cfg, UART_TIMEOUT_DEFAULT_MS);
 
-  // led pin configs
-  static const gpio_config_t led_config = {
-		  .pin = PIN_LED,
-		  .mode = DRV_GPIO_MODE_OUTPUT,
-		  .otype = DRV_GPIO_OTYPE_PUSH_PULL,
-		  .pull = DRV_GPIO_NOPULL,
-		  .speed = 0,
-		  .af = 0
-  };
-
   // init led pin
   gpio_init(&led_config);
+
+
+  // i2c1 bus init
+  i2c_init(&i2c1, &i2c1_cfg);
+
+  drv_status_t probe_result = i2c_probe(&i2c1, 0x76, 10000);
+  (void) probe_result;
 
   /* Loop forever */
   for(;;){

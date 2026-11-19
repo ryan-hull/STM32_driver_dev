@@ -10,13 +10,8 @@
 
 #include <stdbool.h>
 #include "board.h"
+#include "drivers.h"
 
-typedef enum {
-DRV_OK,
-DRV_BAD_PARAM,
-DRV_TIMEOUT,
-DRV_BAUD_ERROR,
-} drv_status_t;
 
 typedef enum {
   DRV_GPIO_MODE_INPUT  = 0,
