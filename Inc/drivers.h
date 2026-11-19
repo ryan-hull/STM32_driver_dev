@@ -27,7 +27,7 @@ DRV_BERR
 //Only use this when there's no state that needs to be unwound
 #define DRV_TRY(expr)                           \
 	do {                                        \
-		st = (expr);                            \
+		drv_status_t st = (expr);                            \
 		if (st != DRV_OK) return st;            \
 	} while (0)
 
@@ -35,7 +35,7 @@ DRV_BERR
 //be cleaned up in case of failure.
 #define DRV_CHECK(expr)                         \
 	do {                                        \
-		st = (expr);                            \
+		drv_status_t st = (expr);                            \
 		if (st != DRV_OK) goto fail;            \
 	} while (0)
 

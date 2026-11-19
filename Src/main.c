@@ -97,6 +97,14 @@ int main(void)
   drv_status_t probe_result = i2c_probe(&i2c1, 0x76, 10000);
   (void) probe_result;
 
+  //uint8_t reg_read_val;
+  //drv_status_t reg_result = i2c_reg_read(&i2c1, 0x76, 0xD0, &reg_read_val, 1, 10000);
+  //(void) reg_result;
+
+  uint8_t reg_read_2[2];
+  drv_status_t reg_result_2 = i2c_reg_read(&i2c1, 0x76, 0xFA, reg_read_2, 2, 10000);
+  (void) reg_result_2;
+
   /* Loop forever */
   for(;;){
 	uint8_t c;
