@@ -148,8 +148,6 @@ drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, size_t *rec
 		console->rx_tail++;
 		buf[i] = data;
 		bytes_received++;
-
-		printf("byte read from ring buffer: %u\r\n", data);
 	}
 	*received = bytes_received;
 	return DRV_OK;
@@ -181,19 +179,12 @@ void USART2_IRQHandler(void) {
 	uint8_t data = (uint8_t) (s_usart2->instance->DR & 0xFF); //cut off the parity bit if 9 bit words
 
 	if ((status & USART_SR_PE) | (status & USART_SR_FE) | (status & USART_SR_NE) | (status & USART_SR_ORE)) {
-		if (status & USART_SR_PE) printf("parity error\r\n");
-		if (status & USART_SR_FE) printf("framing error\r\n");
-		if (status & USART_SR_NE) printf("noise error\r\n");
-		if (status & USART_SR_ORE) printf("overrun error\r\n");
-		// parity error, framing error, noise error, overrun error:
 		s_usart2->error_flags += 1;
 	} else {
 		// move the byte to the ring buffer. index is tail
 		if (s_usart2->rx_head - s_usart2->rx_tail == s_usart2->rx_size) {
 			s_usart2->overflow_count++;
-			printf("buffer overflow | count: %lu\r\n", s_usart2->overflow_count);
 		} else {
-			//uint32_t index = s_usart2->rx_head & (s_usart2->rx_size -1);
 			s_usart2->rx_buf[s_usart2->rx_head & (s_usart2->rx_size -1)] = data;
 			s_usart2->rx_head++;
 		}
@@ -201,7 +192,7 @@ void USART2_IRQHandler(void) {
 }
 
 
-// override __io_putchar to redirect printf to my uart write.
+// override __io_putchar to redirect printf to uart1 write.
 extern int __io_putchar(int ch) {
 	uint8_t c = (uint8_t) ch;
 	uart_write(s_usart1, &c, 1, UART_TIMEOUT_DEFAULT_MS);

@@ -45,8 +45,50 @@ typedef struct {
   volatile uint32_t error_flags;      // (DRV-UART-006)
 } uart_t;
 
+/**
+ * @brief initializes a USART peripheral
+ *
+ * Sets up and starts a USART from a config spec.
+ *
+ * @param[in]  console_cfg  all config settings for this USART.
+ * @param[in]  timeout      the max time to wait for init to complete (ms).
+ *
+ * @retval  DRV_OK          init succeeded.
+ * @retval  DRV_BAD_PARAM   a parameter value in the config is invalid.
+ * @retval  DRV_TIMEOUT     the init took too long to complete.
+ * @retval  DRV_BAUD_ERROR  the real baud rate is not within 2% of the requested rate.
+ */
 drv_status_t uart_init(uart_t *console, uart_config_t *console_cfg, uint32_t timeout);
+
+/**
+ * @brief send bytes on a UART connection
+ *
+ * Sends length bytes on a UART connection with a configurable timeout.
+ *
+ * @param[in]  console      an initialized UART peripheral
+ * @param[in]  string       the data to write.
+ * @oaram[in]  length       the number of bytes to write.
+ * @param[in]  timeout      the max time to wait for write to complete (ms).
+ *
+ * @retval  DRV_OK          write succeeded.
+ * @retval  DRV_TIMEOUT     the write took too long to complete.
+ */
 drv_status_t uart_write(uart_t *console, uint8_t *string, size_t length, uint32_t timeout);
+
+/**
+ * @brief receive bytes on a UART connection
+ *
+ * Reads length bytes on a UART connection with a configurable timeout.
+ *
+ * @param[in]  console      an initialized UART peripheral
+ * @param[out] buf          the data to read.
+ * @oaram[in]  length       the total number of bytes to read.
+ * @param[out] received     the number of bytes actually received.
+ * @param[in]  timeout      the max time to wait for read to complete (ms).
+ *
+ * @retval  DRV_OK          read succeeded.
+ * @retval  DRV_TIMEOUT     the read took too long to complete.
+ */
 drv_status_t uart_read(uart_t *console, uint8_t *buf, size_t length, size_t *received, uint32_t timeout);
 
 #endif /* USART_H_ */
