@@ -30,6 +30,11 @@ typedef struct {
   volatile uint32_t error_count;   // (DRV-I2C-008)
 } i2c_t;
 
+typedef enum {
+	WRITE_MODE,
+	READ_MODE,
+} i2c_mode_t;
+
 // Read/Write/Write_Read (DRV-I2C-004)
 drv_status_t i2c_init(i2c_t *bus, i2c_config_t *bus_cfg);
 drv_status_t i2c_write(i2c_t *bus, uint8_t addr, const uint8_t *data, size_t length, uint32_t timeout);

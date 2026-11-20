@@ -9,15 +9,10 @@
 #include "i2c.h"
 #include "mcu.h"
 
-// add other i2c pointers if needed
+// i2c pointers needed if we add interrupts later
 static i2c_t *s_i2c1 = NULL;
 static i2c_t *s_i2c2 = NULL;
 static i2c_t *s_i2c3 = NULL;
-
-typedef enum {
-	WRITE_MODE,
-	READ_MODE,
-} i2c_mode_t;
 
 
 // Wait until the bus is free. It is not free if the busy flag is set or if the stop bit is set.
@@ -82,17 +77,15 @@ static drv_status_t i2c_set_addr(i2c_t *bus, uint8_t addr, i2c_mode_t mode, uint
 
 
 // clear addr to send it
-static drv_status_t i2c_clear_addr(i2c_t *bus) {
+static void i2c_clear_addr(i2c_t *bus) {
 	// read SR1 and SR2 to clear addr
 	(void) bus->instance->SR1;
 	(void) bus->instance->SR2;
-
-	return DRV_OK;
 }
 
 
 
-// send bytes to the
+// send bytes to the peripheral
 static drv_status_t i2c_send_bytes(i2c_t *bus, const uint8_t *data, size_t length, uint32_t start,  uint32_t timeout) {
 
 	for (size_t i=0; i < length; i++) {
@@ -121,18 +114,15 @@ static drv_status_t i2c_receive_bytes(i2c_t *bus, uint8_t addr, uint8_t *data, s
 
 		bus->instance->CR1 &= ~I2C_CR1_ACK;
 
-
-
 		//send the address
 		DRV_TRY(i2c_set_addr(bus, addr, READ_MODE, start, timeout));
 
-		//disable interrupts! save current state:
+		//clear addr and set stop. These two critical commands must happen adjacent to each other
+		//so disable interrupts! save current state and restore after.
 		uint32_t primask = __get_PRIMASK();
 		__disable_irq();
 		i2c_clear_addr(bus);
-		//set STOP
-		bus->instance->CR1 |= I2C_CR1_STOP;
-		//reenable interrupts
+		i2c_stop(bus);
 		__set_PRIMASK(primask);
 
 
@@ -180,7 +170,7 @@ static drv_status_t i2c_receive_bytes(i2c_t *bus, uint8_t addr, uint8_t *data, s
 		i2c_clear_addr(bus);
 
 		//read through N-2 bytes
-		for (size_t i; i < length-3; i++){
+		for (size_t i=0; i < length-3; i++){
 
 			// wait until rxne is true
 			DRV_TRY(wait_sr1(bus, I2C_SR1_RXNE, start, timeout));
@@ -226,7 +216,7 @@ static void cleanup(i2c_t *bus){
 
 drv_status_t i2c_init(i2c_t *bus, i2c_config_t *bus_cfg) {
 	//sanity check inputs:
-	//todo finish param checks
+	//todo: add more param checks
 	if (!bus || !bus_cfg ) return DRV_BAD_PARAM;
 
 	// map the console to the file-level static.
@@ -252,6 +242,7 @@ drv_status_t i2c_init(i2c_t *bus, i2c_config_t *bus_cfg) {
 		return DRV_BAD_PARAM;
 	}
 
+	// read to enable
 	(void) RCC->APB1ENR;
 
 	// enable scl pin:
@@ -290,7 +281,7 @@ drv_status_t i2c_init(i2c_t *bus, i2c_config_t *bus_cfg) {
 	// enable:
 	bus_cfg->instance->CR1 |= I2C_CR1_PE;
 
-	// assign to console
+	// assign to proper instance
 	bus->instance = bus_cfg->instance;
 
 	return DRV_OK;
@@ -319,7 +310,7 @@ drv_status_t i2c_write(i2c_t *bus, uint8_t addr, const uint8_t *data, size_t len
 	//wait for address to be set before proceeding
 	DRV_TRY(wait_sr1(bus, I2C_SR1_ADDR, start, timeout));
 
-	DRV_CHECK(i2c_clear_addr(bus));
+	i2c_clear_addr(bus);
 
 	//send the data
 	DRV_CHECK(i2c_send_bytes(bus, data, length, start, timeout));
@@ -381,7 +372,7 @@ drv_status_t i2c_write_read(i2c_t *bus, uint8_t addr, const uint8_t *write_data,
 
 	//send address (write mode)
 	DRV_CHECK(i2c_set_addr(bus, addr, WRITE_MODE, start, timeout));
-	DRV_CHECK(i2c_clear_addr(bus));
+	i2c_clear_addr(bus);
 
 	//write data to address
 	DRV_CHECK(i2c_send_bytes(bus, write_data, write_len, start, timeout));
@@ -431,7 +422,7 @@ drv_status_t i2c_reg_write(i2c_t *bus, uint8_t addr, uint8_t reg, const uint8_t 
 
 	//send address
 	DRV_CHECK(i2c_set_addr(bus, addr, WRITE_MODE, start, timeout));
-	DRV_CHECK(i2c_clear_addr(bus));
+	i2c_clear_addr(bus);
 
 	//send register, then data
 	DRV_CHECK(i2c_send_bytes(bus, &reg, 1, timeout - start, timeout));
@@ -475,10 +466,7 @@ drv_status_t i2c_probe(i2c_t *bus, uint8_t addr, uint32_t timeout) {
 	//send the address
 	DRV_CHECK(i2c_set_addr(bus, addr, WRITE_MODE, start, timeout));
 
-	// wait until ADDR or AF is set. If AF, DRV_CHECK returns DRV_AF, otherwise continues to clear and DRV_OK
-	//DRV_CHECK(wait_sr1(bus, (I2C_SR1_ADDR | I2C_SR1_AF), timeout - (millis() - start)));
-
-	DRV_CHECK(i2c_clear_addr(bus));
+	i2c_clear_addr(bus);
 
 	//complete, send stop
 	i2c_stop(bus);

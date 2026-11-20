@@ -32,10 +32,12 @@ DRV_BERR
 	} while (0)
 
 //DRV_CHECK uses goto to handle state that needs to
-//be cleaned up in case of failure.
+//be cleaned up in case of failure. Requires
+// drv_status_t st to be defined before the call
+//and a 'fail' section to go to.
 #define DRV_CHECK(expr)                         \
 	do {                                        \
-		drv_status_t st = (expr);                            \
+		st = (expr);                            \
 		if (st != DRV_OK) goto fail;            \
 	} while (0)
 

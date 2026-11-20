@@ -101,9 +101,13 @@ int main(void)
   //drv_status_t reg_result = i2c_reg_read(&i2c1, 0x76, 0xD0, &reg_read_val, 1, 10000);
   //(void) reg_result;
 
-  uint8_t reg_read_2[2];
-  drv_status_t reg_result_2 = i2c_reg_read(&i2c1, 0x76, 0xFA, reg_read_2, 2, 10000);
-  (void) reg_result_2;
+  //uint8_t reg_read_2[2];
+  //drv_status_t reg_result_2 = i2c_reg_read(&i2c1, 0x76, 0xFA, reg_read_2, 2, 10000);
+  //(void) reg_result_2;
+
+  uint8_t reg_read_3[26];
+  drv_status_t reg_result_3 = i2c_reg_read(&i2c1, 0x76, 0x88, reg_read_3, 26, 10000);
+  (void) reg_result_3;
 
   /* Loop forever */
   for(;;){

@@ -162,19 +162,12 @@ void USART1_IRQHandler(void) {
 	uint8_t data = (uint8_t) (s_usart1->instance->DR & 0xFF); //cut off the parity bit if 9 bit words
 
 	if ((status & USART_SR_PE) | (status & USART_SR_FE) | (status & USART_SR_NE) | (status & USART_SR_ORE)) {
-//		if (status & USART_SR_PE) printf("parity error\r\n");
-//		if (status & USART_SR_FE) printf("framing error\r\n");
-//		if (status & USART_SR_NE) printf("noise error\r\n");
-//		if (status & USART_SR_ORE) printf("overrun error\r\n");
-		// parity error, framing error, noise error, overrun error:
 		s_usart1->error_flags += 1;
 	} else {
 		// move the byte to the ring buffer. index is tail
 		if (s_usart1->rx_head - s_usart1->rx_tail == s_usart1->rx_size) {
 			s_usart1->overflow_count++;
-//			printf("buffer overflow | count: %lu\r\n", s_usart1->overflow_count);
 		} else {
-			//uint32_t index = s_usart1->rx_head & (s_usart1->rx_size -1);
 			s_usart1->rx_buf[s_usart1->rx_head & (s_usart1->rx_size -1)] = data;
 			s_usart1->rx_head++;
 		}
